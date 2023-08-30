@@ -17,6 +17,8 @@ import org.bukkit.event.inventory.PrepareItemCraftEvent;
 
 import java.util.Arrays;
 
+import java.util.Arrays;
+
 public class ItemRecipeFormedScriptEvent extends BukkitScriptEvent implements Listener {
 
     // <--[event]
