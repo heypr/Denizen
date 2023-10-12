@@ -10,9 +10,12 @@ import com.denizenscript.denizen.nms.v1_20.impl.network.handlers.DenizenNetworkM
 import com.denizenscript.denizen.objects.EntityTag;
 import com.denizenscript.denizen.utilities.Utilities;
 import com.denizenscript.denizen.utilities.packets.NetworkInterceptHelper;
+import com.denizenscript.denizencore.objects.ObjectTag;
+import com.denizenscript.denizencore.scripts.commands.core.ReflectionSetCommand;
 import com.denizenscript.denizencore.utilities.ReflectionHelper;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
 import io.netty.buffer.Unpooled;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
@@ -20,11 +23,10 @@ import net.minecraft.network.protocol.game.ClientboundPlayerLookAtPacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
 import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.dedicated.DedicatedPlayerList;
-import net.minecraft.server.level.ChunkMap;
-import net.minecraft.server.level.ServerEntity;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.*;
+import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.server.network.ServerPlayerConnection;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.util.Mth;
@@ -59,15 +61,15 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.CreatureSpawner;
 import org.bukkit.block.data.BlockData;
-import org.bukkit.craftbukkit.v1_20_R1.CraftServer;
-import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
-import org.bukkit.craftbukkit.v1_20_R1.block.CraftBlock;
-import org.bukkit.craftbukkit.v1_20_R1.block.CraftCreatureSpawner;
-import org.bukkit.craftbukkit.v1_20_R1.block.data.CraftBlockData;
-import org.bukkit.craftbukkit.v1_20_R1.entity.*;
-import org.bukkit.craftbukkit.v1_20_R1.event.CraftEventFactory;
-import org.bukkit.craftbukkit.v1_20_R1.inventory.CraftItemStack;
-import org.bukkit.craftbukkit.v1_20_R1.util.CraftLocation;
+import org.bukkit.craftbukkit.v1_20_R2.CraftServer;
+import org.bukkit.craftbukkit.v1_20_R2.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R2.block.CraftBlock;
+import org.bukkit.craftbukkit.v1_20_R2.block.CraftCreatureSpawner;
+import org.bukkit.craftbukkit.v1_20_R2.block.data.CraftBlockData;
+import org.bukkit.craftbukkit.v1_20_R2.entity.*;
+import org.bukkit.craftbukkit.v1_20_R2.event.CraftEventFactory;
+import org.bukkit.craftbukkit.v1_20_R2.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_20_R2.util.CraftLocation;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -776,7 +778,7 @@ public class EntityHelperImpl extends EntityHelper {
             nmsEntity.unsetRemoved();
             nmsEntity.setUUID(id);
             if (nmsEntity instanceof ServerPlayer nmsPlayer) {
-                playerList.placeNewPlayer(DenizenNetworkManagerImpl.getConnection(nmsPlayer), nmsPlayer);
+                playerList.placeNewPlayer(DenizenNetworkManagerImpl.getConnection(nmsPlayer), nmsPlayer, new CommonListenerCookie(nmsPlayer.getGameProfile(), nmsPlayer.connection.latency(), nmsPlayer.clientInformation()));
             }
             else {
                 level.addFreshEntity(nmsEntity);
@@ -795,5 +797,27 @@ public class EntityHelperImpl extends EntityHelper {
     @Override
     public void setStepHeight(Entity entity, float stepHeight) {
         ((CraftEntity) entity).getHandle().setMaxUpStep(stepHeight);
+    }
+
+    @Override
+    public int mapInternalEntityDataName(Entity entity, String name) {
+        return EntityDataNameMapper.getIdForName(((CraftEntity) entity).getHandle().getClass(), name);
+    }
+
+    @Override
+    public void modifyInternalEntityData(Entity entity, Map<Integer, ObjectTag> internalData) {
+        SynchedEntityData nmsEntityData = ((CraftEntity) entity).getHandle().getEntityData();
+        Int2ObjectMap<SynchedEntityData.DataItem<Object>> dataItemsById = ReflectionHelper.getFieldValue(SynchedEntityData.class, ReflectionMappingsInfo.SynchedEntityData_itemsById, nmsEntityData);
+        for (Map.Entry<Integer, ObjectTag> entry : internalData.entrySet()) {
+            SynchedEntityData.DataItem<Object> dataItem = dataItemsById.get(entry.getKey().intValue());
+            if (dataItem == null) {
+                Debug.echoError("Invalid internal data id '" + entry.getKey() + "': couldn't be matched to any internal data for entity of type '" + entity.getType() + "'.");
+                continue;
+            }
+            Object converted = ReflectionSetCommand.convertObjectTypeFor(dataItem.getValue().getClass(), entry.getValue());
+            if (converted != null) {
+                nmsEntityData.set(dataItem.getAccessor(), converted);
+            }
+        }
     }
 }

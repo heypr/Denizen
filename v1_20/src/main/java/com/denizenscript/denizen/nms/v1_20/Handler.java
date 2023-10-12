@@ -13,8 +13,16 @@ import com.denizenscript.denizen.nms.v1_20.impl.SidebarImpl;
 import com.denizenscript.denizen.nms.v1_20.impl.blocks.BlockLightImpl;
 import com.denizenscript.denizen.nms.v1_20.impl.jnbt.CompoundTagImpl;
 import com.denizenscript.denizen.objects.ItemTag;
+import com.denizenscript.denizen.objects.LocationTag;
+import com.denizenscript.denizen.objects.MaterialTag;
+import com.denizenscript.denizen.objects.properties.item.ItemRawNBT;
 import com.denizenscript.denizen.utilities.FormattedTextHelper;
 import com.denizenscript.denizen.utilities.PaperAPITools;
+import com.denizenscript.denizencore.objects.ObjectTag;
+import com.denizenscript.denizencore.objects.core.ElementTag;
+import com.denizenscript.denizencore.objects.core.MapTag;
+import com.denizenscript.denizencore.objects.core.QuaternionTag;
+import com.denizenscript.denizencore.scripts.commands.core.ReflectionSetCommand;
 import com.denizenscript.denizencore.utilities.CoreConfiguration;
 import com.denizenscript.denizencore.utilities.CoreUtilities;
 import com.denizenscript.denizencore.utilities.ReflectionHelper;
@@ -22,6 +30,7 @@ import com.denizenscript.denizencore.utilities.debugging.Debug;
 import com.google.common.collect.Iterables;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
+import com.mojang.authlib.yggdrasil.ProfileResult;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.HoverEvent;
@@ -29,7 +38,9 @@ import net.md_5.bungee.api.chat.hover.content.Content;
 import net.md_5.bungee.api.chat.hover.content.Item;
 import net.md_5.bungee.api.chat.hover.content.Text;
 import net.md_5.bungee.chat.ComponentSerializer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.Rotations;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.ByteArrayTag;
 import net.minecraft.nbt.StringTag;
@@ -47,26 +58,31 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.boss.BossBar;
-import org.bukkit.craftbukkit.v1_20_R1.CraftServer;
-import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
-import org.bukkit.craftbukkit.v1_20_R1.boss.CraftBossBar;
-import org.bukkit.craftbukkit.v1_20_R1.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_20_R1.inventory.CraftInventory;
-import org.bukkit.craftbukkit.v1_20_R1.inventory.CraftInventoryCustom;
-import org.bukkit.craftbukkit.v1_20_R1.inventory.CraftInventoryView;
-import org.bukkit.craftbukkit.v1_20_R1.inventory.CraftItemStack;
-import org.bukkit.craftbukkit.v1_20_R1.persistence.CraftPersistentDataContainer;
-import org.bukkit.craftbukkit.v1_20_R1.util.CraftChatMessage;
-import org.bukkit.craftbukkit.v1_20_R1.util.CraftMagicNumbers;
+import org.bukkit.craftbukkit.v1_20_R2.CraftServer;
+import org.bukkit.craftbukkit.v1_20_R2.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R2.block.data.CraftBlockData;
+import org.bukkit.craftbukkit.v1_20_R2.boss.CraftBossBar;
+import org.bukkit.craftbukkit.v1_20_R2.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R2.inventory.CraftInventory;
+import org.bukkit.craftbukkit.v1_20_R2.inventory.CraftInventoryCustom;
+import org.bukkit.craftbukkit.v1_20_R2.inventory.CraftInventoryView;
+import org.bukkit.craftbukkit.v1_20_R2.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_20_R2.persistence.CraftPersistentDataContainer;
+import org.bukkit.craftbukkit.v1_20_R2.util.CraftChatMessage;
+import org.bukkit.craftbukkit.v1_20_R2.util.CraftLocation;
+import org.bukkit.craftbukkit.v1_20_R2.util.CraftMagicNumbers;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.persistence.PersistentDataContainer;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import org.spigotmc.AsyncCatcher;
 
 import java.lang.invoke.MethodHandle;
@@ -76,6 +92,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 
 public class Handler extends NMSHandler {
 
@@ -93,6 +110,23 @@ public class Handler extends NMSHandler {
         playerHelper = new PlayerHelperImpl();
         worldHelper = new WorldHelperImpl();
         enchantmentHelper = new EnchantmentHelperImpl();
+
+        registerConversion(ItemTag.class, ItemStack.class, item -> CraftItemStack.asNMSCopy(item.getItemStack()));
+        registerConversion(ElementTag.class, Component.class, element -> componentToNMS(FormattedTextHelper.parse(element.asString(), ChatColor.WHITE)));
+        registerConversion(MaterialTag.class, BlockState.class, material -> ((CraftBlockData) material.getModernData()).getState());
+        registerConversion(LocationTag.class, Rotations.class, location -> new Rotations((float) location.getX(), (float) location.getY(), (float) location.getZ()));
+        registerConversion(LocationTag.class, BlockPos.class, CraftLocation::toBlockPosition);
+        registerConversion(MapTag.class, net.minecraft.nbt.CompoundTag.class, map ->
+                ItemRawNBT.convertObjectToNbt(map.identify(), CoreUtilities.noDebugContext, "(item).") instanceof CompoundTagImpl compoundTag ? compoundTag.toNMSTag() : null);
+        registerConversion(LocationTag.class, Vector3f.class, location -> new Vector3f((float) location.getX(), (float) location.getY(), (float) location.getZ()));
+        registerConversion(QuaternionTag.class, Quaternionf.class, quaternion -> new Quaternionf(quaternion.x, quaternion.y, quaternion.z, quaternion.w));
+    }
+
+    public static <DT extends ObjectTag, JT> void registerConversion(Class<DT> denizenType, Class<JT> javaType, Function<DT, JT> convertor) {
+        ReflectionSetCommand.typeConverters.put(javaType, objectTag -> {
+            DT denizenObject = objectTag.asType(denizenType, CoreUtilities.noDebugContext);
+            return denizenObject != null ? convertor.apply(denizenObject) : null;
+        });
     }
 
     private final ProfileEditor profileEditor = new ProfileEditorImpl();
@@ -112,7 +146,7 @@ public class Handler extends NMSHandler {
 
     @Override
     public boolean isCorrectMappingsCode() {
-        return ((CraftMagicNumbers) CraftMagicNumbers.INSTANCE).getMappingsVersion().equals("bcf3dcb22ad42792794079f9443df2c0");
+        return ((CraftMagicNumbers) CraftMagicNumbers.INSTANCE).getMappingsVersion().equals("3478a65bfd04b15b431fe107b3617dfc");
     }
 
     @Override
@@ -160,10 +194,14 @@ public class Handler extends NMSHandler {
             }
             Property textures = profile.getProperties().containsKey("textures") ? Iterables.getFirst(profile.getProperties().get("textures"), null) : null;
             if (textures == null || !textures.hasSignature() || profile.getName() == null || profile.getId() == null) {
-                profile = minecraftServer.getSessionService().fillProfileProperties(profile, true);
+                ProfileResult actualProfile = minecraftServer.getSessionService().fetchProfile(profile.getId(), true);
+                if (actualProfile == null) {
+                    return null;
+                }
+                profile = actualProfile.profile();
                 textures = profile.getProperties().containsKey("textures") ? Iterables.getFirst(profile.getProperties().get("textures"), null) : null;
             }
-            return new PlayerProfile(profile.getName(), profile.getId(), textures == null ? null : textures.getValue(), textures == null ? null : textures.getSignature());
+            return new PlayerProfile(profile.getName(), profile.getId(), textures == null ? null : textures.value(), textures == null ? null : textures.signature());
         }
         catch (Exception e) {
             if (CoreConfiguration.debugVerbose) {
@@ -245,8 +283,8 @@ public class Handler extends NMSHandler {
         GameProfile gameProfile = ((CraftPlayer) player).getProfile();
         Property property = Iterables.getFirst(gameProfile.getProperties().get("textures"), null);
         return new PlayerProfile(gameProfile.getName(), gameProfile.getId(),
-                property != null ? property.getValue() : null,
-                property != null ? property.getSignature() : null);
+                property != null ? property.value() : null,
+                property != null ? property.signature() : null);
     }
 
     @Override

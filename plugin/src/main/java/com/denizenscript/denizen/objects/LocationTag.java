@@ -4179,7 +4179,7 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
         // - integrity: ElementTag(Decimal): The integrity of the structure (0-1). Lower integrity values will result in more blocks being removed when loading a structure.
         // used with the seed to determine which blocks are randomly removed to mimic "decay".
         // - metadata: ElementTag: Only applies in DATA mode, sets specific functions that can be applied to the structure,
-        // check the Minecraft wiki (<@link url https://minecraft.gamepedia.com/Structure_Block#Data>) for more information.
+        // check the Minecraft wiki (<@link url https://minecraft.wiki/w/Structure_Block#Data>) for more information.
         // - mirror: ElementTag: How the structure is mirrored; "NONE", "LEFT_RIGHT", or "FRONT_BACK".
         // - box_position: LocationTag: The position of the structure's bounding box, relative to the position of the structure block. Maximum allowed distance is 48 blocks in any direction.
         // - rotation: ElementTag: The rotation of the structure; "NONE", "CLOCKWISE_90", "CLOCKWISE_180", or "COUNTERCLOCKWISE_90".
@@ -4349,6 +4349,43 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
                 }
                 brushableBlock.setItem(item.getItemStack());
                 brushableBlock.update();
+            });
+
+            // <--[tag]
+            // @attribute <LocationTag.waxed>
+            // @returns ElementTag(Boolean)
+            // @mechanism LocationTag.waxed
+            // @group world
+            // @description
+            // If the location is a sign block, returns whether it is waxed (locked to prevent players editing the text).
+            // -->
+            tagProcessor.registerTag(ElementTag.class, "waxed", (attribute, object) -> {
+                if (!(object.getBlockStateForTag(attribute) instanceof Sign sign)) {
+                    attribute.echoError("Location is not a valid Sign block.");
+                    return null;
+                }
+                return new ElementTag(sign.isWaxed());
+            });
+
+            // <--[mechanism]
+            // @object LocationTag
+            // @name waxed
+            // @input ElementTag(Boolean)
+            // @description
+            // Sets whether the sign at the location is waxed (locked to prevent players editing the text).
+            // @tags
+            // <LocationTag.waxed>
+            // -->
+            tagProcessor.registerMechanism("waxed", false, ElementTag.class, (object, mechanism, value) -> {
+                if (!mechanism.requireBoolean()) {
+                    return;
+                }
+                if (!(object.getBlockState() instanceof Sign sign)) {
+                    mechanism.echoError("'waxed' mechanism can only be called on Sign blocks.");
+                    return;
+                }
+                sign.setWaxed(value.asBoolean());
+                sign.update();
             });
         }
 
@@ -5298,7 +5335,7 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
         // - integrity: ElementTag(Decimal): The integrity of the structure (0-1). Lower integrity values will result in more blocks being removed when loading a structure.
         // used with the seed to determine which blocks are randomly removed to mimic "decay".
         // - metadata: ElementTag: Can only be set while in DATA mode. sets specific functions that can be applied to the structure,
-        // check the Minecraft wiki (<@link url https://minecraft.gamepedia.com/Structure_Block#Data>) for more information.
+        // check the Minecraft wiki (<@link url https://minecraft.wiki/w/Structure_Block#Data>) for more information.
         // - mirror: ElementTag: How the structure is mirrored; "NONE", "LEFT_RIGHT", or "FRONT_BACK".
         // - box_position: LocationTag: The position of the structure's bounding box, relative to the position of the structure block. Maximum allowed distance is 48 blocks in any direction.
         // - rotation: ElementTag: The rotation of the structure; "NONE", "CLOCKWISE_90", "CLOCKWISE_180", or "COUNTERCLOCKWISE_90".

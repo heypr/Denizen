@@ -1276,7 +1276,7 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         // @attribute <EntityTag.vanilla_tags>
         // @returns ListTag
         // @description
-        // Returns a list of vanilla tags that apply to this entity type. See also <@link url https://minecraft.fandom.com/wiki/Tag>.
+        // Returns a list of vanilla tags that apply to this entity type. See also <@link url https://minecraft.wiki/w/Tag>.
         // -->
         tagProcessor.registerTag(ListTag.class, "vanilla_tags", (attribute, object) -> {
             HashSet<String> tags = VanillaTagHelper.tagsByEntity.get(object.getBukkitEntityType());
@@ -2414,8 +2414,7 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         // @group properties
         // @description
         // Returns whether the entity can be colored.
-        // If this returns true, it will enable access to:
-        // <@link mechanism EntityTag.color> and <@link tag EntityTag.color>
+        // If this returns true, it will enable access to <@link property EntityTag.color>.
         // -->
         registerSpawnedOnlyTag(ElementTag.class, "colorable", (attribute, object) -> {
             return new ElementTag(EntityColor.describes(object));
@@ -2751,7 +2750,7 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         // @returns ElementTag(Boolean)
         // @description
         // Returns whether this fish hook is in open water. Fish hooks in open water can catch treasure.
-        // See <@link url https://minecraft.fandom.com/wiki/Fishing> for more info.
+        // See <@link url https://minecraft.wiki/w/Fishing> for more info.
         // -->
         registerSpawnedOnlyTag(ElementTag.class, "fish_hook_in_open_water", (attribute, object) -> {
             if (!(object.getBukkitEntity() instanceof FishHook fishHook)) {
@@ -2963,6 +2962,60 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
                 NMSHandler.entityHelper.setPose(object.getBukkitEntity(), input.asEnum(Pose.class));
             }
         });
+
+        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_20)) {
+
+            // <--[mechanism]
+            // @object EntityTag
+            // @name play_hurt_animation
+            // @input ElementTag(Decimal)
+            // @description
+            // Plays a hurt animation that makes the living entity flash red. When the entity is a player, you can change the direction the camera rotates.
+            // Damage direction is relative to the player, where 0 is in front, 90 is to the right, 180 is behind, and 270 is to the left.
+            // For versions 1.19 or below, use <@link command animate>.
+            // @example
+            // # The player's camera will rotate as if the player took damage from the right and the player will flash red.
+            // - adjust <player> play_hurt_animation:90
+            // @example
+            // # This will flash the entity red as if it took damage.
+            // - adjust <[entity]> play_hurt_animation:0
+            // -->
+            registerSpawnedOnlyMechanism("play_hurt_animation", false, ElementTag.class, (object, mechanism, value) -> {
+                if (mechanism.requireFloat()) {
+                    if (!object.isLivingEntity()) {
+                        mechanism.echoError("The 'play_hurt_animation' mechanism only works for living entities!");
+                        return;
+                    }
+                    object.getLivingEntity().playHurtAnimation(value.asFloat());
+                }
+            });
+
+            // <--[mechanism]
+            // @object EntityTag
+            // @name internal_data
+            // @input MapTag
+            // @description
+            // Modifies an entity's internal entity data as a map of data name to value.
+            // The values can be Denizen objects, and will be automatically converted to the relevant internal value.
+            // This is an advanced mechanism that directly controls an entity's data, with no verification/limitations on what's being set (other than basic type checking).
+            // You should almost always prefer using the appropriate mechanism/property instead of this, other than very specific special cases.
+            // See <@link url https://github.com/DenizenScript/Denizen/blob/dev/v1_20/src/main/java/com/denizenscript/denizen/nms/v1_20/helpers/EntityDataNameMapper.java#L50> for all the available names (and their respective ids),
+            // And <@link url https://wiki.vg/Entity_metadata> for a documentation of what each id is.
+            // (note that it documents the values that eventually get sent to the client, so the input this expects might be slightly different in some cases).
+            // -->
+            tagProcessor.registerMechanism("internal_data", false, MapTag.class, (object, mechanism, input) -> {
+                Map<Integer, ObjectTag> internalData = new HashMap<>(input.size());
+                for (Map.Entry<StringHolder, ObjectTag> entry : input.entrySet()) {
+                    int id = NMSHandler.entityHelper.mapInternalEntityDataName(object.getBukkitEntity(), entry.getKey().low);
+                    if (id == -1) {
+                        mechanism.echoError("Invalid internal data key: " + entry.getKey());
+                        continue;
+                    }
+                    internalData.put(id, entry.getValue());
+                }
+                NMSHandler.entityHelper.modifyInternalEntityData(object.getBukkitEntity(), internalData);
+            });
+        }
     }
 
     public EntityTag describe(TagContext context) {
