@@ -6,7 +6,6 @@ import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.nms.interfaces.packets.PacketOutChat;
 import com.denizenscript.denizen.objects.EntityTag;
 import com.denizenscript.denizen.objects.ItemTag;
-import com.denizenscript.denizen.objects.WorldTag;
 import com.denizenscript.denizen.paper.events.*;
 import com.denizenscript.denizen.paper.properties.*;
 import com.denizenscript.denizen.paper.tags.PaperTagBase;
@@ -32,6 +31,7 @@ public class PaperModule {
         ScriptEvent.registerScriptEvent(AnvilBlockDamagedScriptEvent.class);
         ScriptEvent.registerScriptEvent(AreaEnterExitScriptEventPaperImpl.class);
         ScriptEvent.registerScriptEvent(BellRingScriptEvent.class);
+        ScriptEvent.registerScriptEvent(BlockPreDispenseScriptEvent.class);
         ScriptEvent.registerScriptEvent(CreeperIgnitesScriptEvent.class);
         ScriptEvent.registerScriptEvent(EntityAddToWorldScriptEvent.class);
         ScriptEvent.registerScriptEvent(EntityKnocksbackEntityScriptEvent.class);
@@ -100,6 +100,7 @@ public class PaperModule {
         PropertyParser.registerProperty(EntityCarryingEgg.class, EntityTag.class);
         PropertyParser.registerProperty(EntityDrinkingPotion.class, EntityTag.class);
         if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19)) {
+            PropertyParser.registerProperty(EntityEggLayTime.class, EntityTag.class);
             PropertyParser.registerProperty(EntityFriction.class, EntityTag.class);
         }
         PropertyParser.registerProperty(EntityLeftHanded.class, EntityTag.class);
@@ -114,10 +115,9 @@ public class PaperModule {
         // Paper object extensions
         PropertyParser.registerProperty(PaperEntityProperties.class, EntityTag.class);
         PropertyParser.registerProperty(PaperItemTagProperties.class, ItemTag.class);
-        PropertyParser.registerProperty(PaperWorldProperties.class, WorldTag.class);
-        PaperPlayerExtensions.register();
         PaperElementExtensions.register();
-
+        PaperPlayerExtensions.register();
+        PaperWorldExtensions.register();
         // Paper Tags
         new PaperTagBase();
 
@@ -131,7 +131,13 @@ public class PaperModule {
         if (text == null) {
             return null;
         }
-        return jsonToComponent(FormattedTextHelper.componentToJson(FormattedTextHelper.parse(text, baseColor)));
+        try {
+            return jsonToComponent(FormattedTextHelper.componentToJson(FormattedTextHelper.parse(text, baseColor)));
+        }
+        catch (Exception ex) {
+            Debug.verboseLog("Failed to parse formatted text: " + text.replace(ChatColor.COLOR_CHAR, '&'));
+            throw ex;
+        }
     }
 
     public static String stringifyComponent(Component component) {
@@ -145,7 +151,13 @@ public class PaperModule {
         if (json == null) {
             return null;
         }
-        return GsonComponentSerializer.gson().deserialize(json);
+        try {
+            return GsonComponentSerializer.gson().deserialize(json);
+        }
+        catch (Exception ex) {
+            Debug.verboseLog("Failed to parse json to component: " + json);
+            throw ex;
+        }
     }
 
     public static String componentToJson(Component component) {

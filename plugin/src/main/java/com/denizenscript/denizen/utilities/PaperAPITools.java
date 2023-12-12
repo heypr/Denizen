@@ -1,11 +1,14 @@
 package com.denizenscript.denizen.utilities;
 
 import com.denizenscript.denizen.nms.NMSHandler;
+import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.scripts.commands.entity.TeleportCommand;
+import com.denizenscript.denizen.scripts.containers.core.ItemScriptContainer;
+import com.denizenscript.denizen.utilities.packets.NetworkInterceptHelper;
+import com.denizenscript.denizencore.utilities.ReflectionHelper;
+import com.denizenscript.denizencore.utilities.debugging.Debug;
 import net.md_5.bungee.api.chat.BaseComponent;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Nameable;
+import org.bukkit.*;
 import org.bukkit.block.Sign;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
@@ -19,6 +22,7 @@ import org.bukkit.inventory.*;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Consumer;
 
+import java.lang.invoke.MethodHandle;
 import java.util.List;
 
 public class PaperAPITools {
@@ -111,7 +115,7 @@ public class PaperAPITools {
         entity.teleport(loc, cause);
     }
 
-    public void registerBrewingRecipe(String keyName, ItemStack result, ItemStack[] inputItem, boolean inputExact, ItemStack[] ingredientItem, boolean ingredientExact) {
+    public void registerBrewingRecipe(String keyName, ItemStack result, String input, String ingredient, ItemScriptContainer itemScriptContainer) {
         throw new UnsupportedOperationException();
     }
 
@@ -120,6 +124,14 @@ public class PaperAPITools {
 
     public boolean isDenizenMix(ItemStack currInput, ItemStack ingredient) {
         return false;
+    }
+
+    public String getBrewingRecipeInputMatcher(NamespacedKey recipeId) {
+        return null;
+    }
+
+    public String getBrewingRecipeIngredientMatcher(NamespacedKey recipeId) {
+        return null;
     }
 
     public String getDeathMessage(PlayerDeathEvent event) {
@@ -138,7 +150,23 @@ public class PaperAPITools {
         NMSHandler.instance.getProfileEditor().setPlayerSkinBlob(player, blob);
     }
 
+    public static MethodHandle WORLD_SPAWN_BUKKIT_CONSUMER = null;
+
+    // TODO once 1.20 is the minimum supported version, use the modern java.util.Consumer
     public <T extends Entity> T spawnEntity(Location location, Class<T> type, Consumer<T> configure, CreatureSpawnEvent.SpawnReason reason) {
+        if (NMSHandler.getVersion().isAtMost(NMSVersion.v1_19)) {
+            // Takes the deprecated bukkit consumer on older versions
+            if (WORLD_SPAWN_BUKKIT_CONSUMER == null) {
+                WORLD_SPAWN_BUKKIT_CONSUMER = ReflectionHelper.getMethodHandle(RegionAccessor.class, "spawn", Location.class, Class.class, Consumer.class);
+            }
+            try {
+                return (T) WORLD_SPAWN_BUKKIT_CONSUMER.invoke(location.getWorld(), location, type, configure);
+            }
+            catch (Throwable e) {
+                Debug.echoError(e);
+                return null;
+            }
+        }
         return location.getWorld().spawn(location, type, configure);
     }
 
@@ -177,5 +205,10 @@ public class PaperAPITools {
 
     public void kickPlayer(Player player, String message) {
         player.kickPlayer(message);
+    }
+
+    public String getClientBrand(Player player) {
+        NetworkInterceptHelper.enable();
+        return NMSHandler.playerHelper.getClientBrand(player);
     }
 }

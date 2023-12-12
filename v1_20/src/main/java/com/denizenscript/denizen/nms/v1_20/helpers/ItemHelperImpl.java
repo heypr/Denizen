@@ -46,14 +46,14 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.data.BlockData;
-import org.bukkit.craftbukkit.v1_20_R2.CraftServer;
-import org.bukkit.craftbukkit.v1_20_R2.CraftWorld;
-import org.bukkit.craftbukkit.v1_20_R2.block.data.CraftBlockData;
-import org.bukkit.craftbukkit.v1_20_R2.inventory.CraftInventoryPlayer;
-import org.bukkit.craftbukkit.v1_20_R2.inventory.CraftItemStack;
-import org.bukkit.craftbukkit.v1_20_R2.inventory.CraftRecipe;
-import org.bukkit.craftbukkit.v1_20_R2.util.CraftMagicNumbers;
-import org.bukkit.craftbukkit.v1_20_R2.util.CraftNamespacedKey;
+import org.bukkit.craftbukkit.v1_20_R3.CraftServer;
+import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R3.block.data.CraftBlockData;
+import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftInventoryPlayer;
+import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftRecipe;
+import org.bukkit.craftbukkit.v1_20_R3.util.CraftMagicNumbers;
+import org.bukkit.craftbukkit.v1_20_R3.util.CraftNamespacedKey;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.RecipeChoice;
@@ -61,6 +61,7 @@ import org.bukkit.inventory.ShapedRecipe;
 
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.function.Predicate;
 
 public class ItemHelperImpl extends ItemHelper {
 
@@ -503,10 +504,13 @@ public class ItemHelperImpl extends ItemHelper {
                 if (PaperPotionMix_CLASS == null) {
                     PaperPotionMix_CLASS = paperMix.getClass();
                 }
-                RecipeChoice ingredient = CraftRecipe.toBukkit(ReflectionHelper.getFieldValue(PaperPotionMix_CLASS, "ingredient", paperMix));
-                RecipeChoice input = CraftRecipe.toBukkit(ReflectionHelper.getFieldValue(PaperPotionMix_CLASS, "input", paperMix));
+                Predicate<net.minecraft.world.item.ItemStack> ingredient = ReflectionHelper.getFieldValue(PaperPotionMix_CLASS, "ingredient", paperMix);
+                Predicate<net.minecraft.world.item.ItemStack> input = ReflectionHelper.getFieldValue(PaperPotionMix_CLASS, "input", paperMix);
+                // Not an instance of net.minecraft.world.item.crafting.Ingredient = a predicate recipe choice
+                RecipeChoice ingredientChoice = ingredient instanceof Ingredient nmsRecipeChoice ? CraftRecipe.toBukkit(nmsRecipeChoice) : null;
+                RecipeChoice inputChoice = input instanceof Ingredient nmsRecipeChoice ? CraftRecipe.toBukkit(nmsRecipeChoice) : null;
                 ItemStack result = CraftItemStack.asBukkitCopy(ReflectionHelper.getFieldValue(PaperPotionMix_CLASS, "result", paperMix));
-                return new BrewingRecipe(ingredient, input, result);
+                return new BrewingRecipe(inputChoice, ingredientChoice, result);
             });
         }
         return customBrewingRecipes;

@@ -45,13 +45,11 @@ import net.citizensnpcs.npc.ai.NPCHolder;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.ChiseledBookshelf;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.Merchant;
+import org.bukkit.inventory.*;
 import org.bukkit.loot.LootTable;
 import org.bukkit.loot.Lootable;
 import org.bukkit.potion.PotionEffect;
@@ -2238,13 +2236,10 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         // @returns ElementTag(Boolean)
         // @group attributes
         // @description
-        // Returns whether or not the arrow/trident entity is in a block.
+        // Returns whether the arrow/trident entity is in a block.
         // -->
         registerSpawnedOnlyTag(ElementTag.class, "is_in_block", (attribute, object) -> {
-            if (object.getBukkitEntity() instanceof Arrow) {
-                return new ElementTag(((Arrow) object.getBukkitEntity()).isInBlock());
-            }
-            return null;
+            return object.getBukkitEntity() instanceof AbstractArrow abstractArrow ? new ElementTag(abstractArrow.isInBlock()) : null;
         });
 
         // <--[tag]
@@ -2255,14 +2250,14 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         // Returns the location of the block that the arrow/trident or hanging entity is attached to.
         // -->
         registerSpawnedOnlyTag(LocationTag.class, "attached_block", (attribute, object) -> {
-            if (object.getBukkitEntity() instanceof Arrow) {
-                Block attachedBlock = ((Arrow) object.getBukkitEntity()).getAttachedBlock();
+            if (object.getBukkitEntity() instanceof AbstractArrow abstractArrow) {
+                Block attachedBlock = abstractArrow.getAttachedBlock();
                 if (attachedBlock != null) {
                     return new LocationTag(attachedBlock.getLocation());
                 }
             }
-            else if (object.getBukkitEntity() instanceof Hanging) {
-                Vector dir = ((Hanging) object.getBukkitEntity()).getAttachedFace().getDirection();
+            else if (object.getBukkitEntity() instanceof Hanging hanging) {
+                Vector dir = hanging.getAttachedFace().getDirection();
                 return new LocationTag(object.getLocation().clone().add(dir.multiply(0.5))).getBlockLocation();
             }
             return null;
@@ -2984,6 +2979,42 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
 
             // <--[mechanism]
             // @object EntityTag
+            // @name start_using_hand
+            // @input ElementTag
+            // @description
+            // Forces an entity to start using one of its hands.
+            // Input is either HAND or OFF_HAND, defaults to HAND.
+            // -->
+            tagProcessor.registerMechanism("start_using_hand", false, (object, mechanism) -> {
+                if (!object.isLivingEntity()) {
+                    mechanism.echoError("The 'start_using_hand' mechanism only works for living entities!");
+                    return;
+                }
+                EquipmentSlot hand = mechanism.hasValue() ? mechanism.getValue().asEnum(EquipmentSlot.class) : EquipmentSlot.HAND;
+                if (hand != EquipmentSlot.HAND && hand != EquipmentSlot.OFF_HAND) {
+                    mechanism.echoError("Invalid equipment slot '" + mechanism.getValue() + "' specified: must be HAND or OFF_HAND.");
+                    return;
+                }
+                NMSHandler.entityHelper.startUsingItem(object.getLivingEntity(), hand);
+            });
+
+            // <--[mechanism]
+            // @object EntityTag
+            // @name stop_using_hand
+            // @input None
+            // @description
+            // Forces an entity to stop using either hand.
+            // -->
+            tagProcessor.registerMechanism("stop_using_hand", false, (object, mechanism) -> {
+                if (!object.isLivingEntity()) {
+                    mechanism.echoError("The 'stop_using_hand' mechanism only works for living entities!");
+                    return;
+                }
+                NMSHandler.entityHelper.stopUsingItem(object.getLivingEntity());
+            });
+
+            // <--[mechanism]
+            // @object EntityTag
             // @name play_hurt_animation
             // @input ElementTag(Decimal)
             // @description
@@ -3018,6 +3049,24 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
             // -->
             tagProcessor.registerMechanism("internal_data", false, MapTag.class, (object, mechanism, input) -> {
                 NMSHandler.entityHelper.modifyInternalEntityData(object.getBukkitEntity(), input);
+            });
+
+            // <--[tag]
+            // @attribute <EntityTag.bookshelf_slot>
+            // @returns ElementTag(Number)
+            // @description
+            // Returns the Chiseled Bookshelf slot that the entity is looking at, if any.
+            // See also <@link tag LocationTag.slot>
+            // -->
+            registerSpawnedOnlyTag(ElementTag.class, "bookshelf_slot", (attribute, object) -> {
+                RayTraceResult result = object.getLivingEntity().rayTraceBlocks(4.5);
+                if (result == null || result.getHitBlock().getType() != Material.CHISELED_BOOKSHELF) {
+                    attribute.echoError("'EntityTag.bookshelf_slot' requires the entity to look at a Chiseled Bookshelf block.");
+                    return null;
+                }
+                ChiseledBookshelf bookshelfState = (ChiseledBookshelf) result.getHitBlock().getState();
+                Vector vector = result.getHitPosition().subtract(result.getHitBlock().getLocation().toVector());
+                return new ElementTag(bookshelfState.getSlot(vector) + 1);
             });
         }
     }
