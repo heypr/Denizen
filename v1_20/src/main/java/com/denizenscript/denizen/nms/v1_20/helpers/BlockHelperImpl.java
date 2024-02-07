@@ -35,7 +35,10 @@ import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.PushReaction;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.Instrument;
+import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.CreatureSpawner;
@@ -43,13 +46,15 @@ import org.bukkit.block.Skull;
 import org.bukkit.craftbukkit.v1_20_R3.CraftChunk;
 import org.bukkit.craftbukkit.v1_20_R3.CraftServer;
 import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_20_R3.block.*;
+import org.bukkit.craftbukkit.v1_20_R3.block.CraftBlock;
+import org.bukkit.craftbukkit.v1_20_R3.block.CraftBlockEntityState;
+import org.bukkit.craftbukkit.v1_20_R3.block.CraftCreatureSpawner;
+import org.bukkit.craftbukkit.v1_20_R3.block.CraftSkull;
 import org.bukkit.craftbukkit.v1_20_R3.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.v1_20_R3.tag.CraftBlockTag;
 import org.bukkit.craftbukkit.v1_20_R3.util.CraftLocation;
 import org.bukkit.craftbukkit.v1_20_R3.util.CraftMagicNumbers;
-import org.bukkit.entity.Player;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
@@ -151,21 +156,6 @@ public class BlockHelperImpl implements BlockHelper {
         }
         return ReflectionHelper.getFieldValue(net.minecraft.world.level.block.state.BlockBehaviour.class, ReflectionMappingsInfo.BlockBehaviour_explosionResistance, block);
     }
-
-    @Override
-    public org.bukkit.block.BlockState generateBlockState(Block block, Material mat) {
-        try {
-            CraftBlockState state = (CraftBlockState) CRAFTBLOCKSTATE_CONSTRUCTOR.invoke(block);
-            state.setData(getMaterialBlockState(mat));
-            return state;
-        }
-        catch (Throwable ex) {
-            Debug.echoError(ex);
-            return null;
-        }
-    }
-
-    public static final MethodHandle CRAFTBLOCKSTATE_CONSTRUCTOR = ReflectionHelper.getConstructor(CraftBlockState.class, Block.class);
 
     public static final MethodHandle MATERIAL_PUSH_REACTION_SETTER = ReflectionHelper.getFinalSetterForFirstOfType(BlockBehaviour.BlockStateBase.class, PushReaction.class);
 
@@ -277,12 +267,6 @@ public class BlockHelperImpl implements BlockHelper {
         }
     }
 
-    @Override
-    public Color getMapColor(Block block) {
-        CraftBlock craftBlock = (CraftBlock) block;
-        return Color.fromRGB(craftBlock.getNMS().getMapColor(craftBlock.getHandle(), craftBlock.getPosition()).col);
-    }
-
     public static final MethodHandle HOLDERSET_NAMED_BIND = ReflectionHelper.getMethodHandle(HolderSet.Named.class, ReflectionMappingsInfo.HolderSetNamed_bind_method, List.class);
     public static final MethodHandle HOLDER_REFERENCE_BINDTAGS = ReflectionHelper.getMethodHandle(Holder.Reference.class, ReflectionMappingsInfo.HolderReference_bindTags_method, Collection.class);
 
@@ -325,9 +309,6 @@ public class BlockHelperImpl implements BlockHelper {
         catch (Throwable ex) {
             Debug.echoError(ex);
         }
-        ClientboundUpdateTagsPacket tagsPacket = new ClientboundUpdateTagsPacket(TagNetworkSerialization.serializeTagsToNetwork(((CraftServer) Bukkit.getServer()).getServer().registries()));
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            PacketHelperImpl.send(player, tagsPacket);
-        }
+        PacketHelperImpl.broadcast(new ClientboundUpdateTagsPacket(TagNetworkSerialization.serializeTagsToNetwork(((CraftServer) Bukkit.getServer()).getServer().registries())));
     }
 }

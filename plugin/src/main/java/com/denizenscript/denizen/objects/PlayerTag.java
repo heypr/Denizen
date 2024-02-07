@@ -2557,6 +2557,19 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
             return result;
         });
 
+        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_18)) {
+
+            // <--[tag]
+            // @attribute <PlayerTag.skin_model>
+            // @returns ElementTag
+            // @description
+            // Returns the player's skin model, either CLASSIC or SLIM.
+            // -->
+            registerOnlineOnlyTag(ElementTag.class, "skin_model", (attribute, object) -> {
+                return MultiVersionHelper1_18.getSkinModel(object.getPlayerEntity());
+            });
+        }
+
         if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19)) {
 
             // <--[tag]

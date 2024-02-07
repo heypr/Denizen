@@ -27,7 +27,10 @@ import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.dedicated.DedicatedPlayerList;
-import net.minecraft.server.level.*;
+import net.minecraft.server.level.ChunkMap;
+import net.minecraft.server.level.ServerEntity;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.server.network.ServerPlayerConnection;
 import net.minecraft.server.players.PlayerList;
@@ -121,7 +124,7 @@ public class EntityHelperImpl extends EntityHelper {
         if (attrib != null) {
             damage = attrib.getValue();
         }
-        if (attacker.getEquipment() != null && attacker.getEquipment().getItemInMainHand() != null) {
+        if (attacker.getEquipment() != null) {
             damage += EnchantmentHelper.getDamageBonus(CraftItemStack.asNMSCopy(attacker.getEquipment().getItemInMainHand()), monsterType);
         }
         if (damage <= 0) {
@@ -172,12 +175,6 @@ public class EntityHelperImpl extends EntityHelper {
         ((CraftBlock) location.getBlock()).getNMS().use(((CraftWorld) location.getWorld()).getHandle(),
                 craftPlayer != null ? craftPlayer.getHandle() : null, InteractionHand.MAIN_HAND,
                 new BlockHitResult(new Vec3(0, 0, 0), null, CraftLocation.toBlockPosition(location), false));
-    }
-
-    @Override
-    public Entity getEntity(World world, UUID uuid) {
-        net.minecraft.world.entity.Entity entity = ((CraftWorld) world).getHandle().getEntity(uuid);
-        return entity == null ? null : entity.getBukkitEntity();
     }
 
     @Override
@@ -349,20 +346,6 @@ public class EntityHelperImpl extends EntityHelper {
         else {
             entity.teleport(location);
         }
-    }
-
-    @Override
-    public List<Player> getPlayersThatSee(Entity entity) {
-        ChunkMap tracker = ((ServerLevel) ((CraftEntity) entity).getHandle().level()).getChunkSource().chunkMap;
-        ChunkMap.TrackedEntity entityTracker = tracker.entityMap.get(entity.getEntityId());
-        ArrayList<Player> output = new ArrayList<>();
-        if (entityTracker == null) {
-            return output;
-        }
-        for (ServerPlayerConnection player : entityTracker.seenBy) {
-            output.add(player.getPlayer().getBukkitEntity());
-        }
-        return output;
     }
 
     @Override
@@ -862,5 +845,24 @@ public class EntityHelperImpl extends EntityHelper {
     public void openHorseInventory(Player player, AbstractHorse horse) {
         net.minecraft.world.entity.animal.horse.AbstractHorse nmsHorse = ((CraftAbstractHorse) horse).getHandle();
         ((CraftPlayer) player).getHandle().openHorseInventory(nmsHorse, nmsHorse.inventory);
+    }
+
+    private net.minecraft.nbt.CompoundTag getRawEntityNBT(net.minecraft.world.entity.Entity entity) {
+        return entity.saveWithoutId(new net.minecraft.nbt.CompoundTag());
+    }
+
+    @Override
+    public CompoundTag getRawNBT(Entity entity) {
+        return CompoundTagImpl.fromNMSTag(getRawEntityNBT(((CraftEntity) entity).getHandle()));
+    }
+
+    @Override
+    public void modifyRawNBT(Entity entity, CompoundTag tag) {
+        net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity) entity).getHandle();
+        net.minecraft.nbt.CompoundTag nmsTag = ((CompoundTagImpl) tag).toNMSTag();
+        net.minecraft.nbt.CompoundTag nmsMergedTag = getRawEntityNBT(nmsEntity).merge(nmsTag);
+        UUID uuid = nmsEntity.getUUID();
+        nmsEntity.load(nmsMergedTag);
+        nmsEntity.setUUID(uuid);
     }
 }
