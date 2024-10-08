@@ -30,7 +30,9 @@ public class PaperModule {
         // Events
         ScriptEvent.registerScriptEvent(AnvilBlockDamagedScriptEvent.class);
         ScriptEvent.registerScriptEvent(AreaEnterExitScriptEventPaperImpl.class);
-        ScriptEvent.registerScriptEvent(BellRingScriptEvent.class);
+        if (NMSHandler.getVersion().isAtMost(NMSVersion.v1_18)) {
+            ScriptEvent.registerScriptEvent(BellRingScriptEvent.class);
+        }
         ScriptEvent.registerScriptEvent(BlockPreDispenseScriptEvent.class);
         ScriptEvent.registerScriptEvent(CreeperIgnitesScriptEvent.class);
         ScriptEvent.registerScriptEvent(EntityAddToWorldScriptEvent.class);
@@ -73,6 +75,9 @@ public class PaperModule {
         ScriptEvent.registerScriptEvent(PlayerSelectsStonecutterRecipeScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerLecternPageChangeScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerSpectatesEntityScriptEvent.class);
+        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_20)) {
+            ScriptEvent.registerScriptEvent(PlayerShieldDisableScriptEvent.class);
+        }
         ScriptEvent.registerScriptEvent(PlayerStopsSpectatingScriptEvent.class);
         if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19)) {
             ScriptEvent.registerScriptEvent(PlayerTracksEntityScriptEvent.class);
@@ -83,6 +88,7 @@ public class PaperModule {
         ScriptEvent.registerScriptEvent(ServerListPingScriptEventPaperImpl.class);
         ScriptEvent.registerScriptEvent(ServerResourcesReloadedScriptEvent.class);
         ScriptEvent.registerScriptEvent(SkeletonHorseTrapScriptEvent.class);
+        ScriptEvent.registerScriptEvent(TargetBlockHitScriptEvent.class);
         if (NMSHandler.getVersion().isAtMost(NMSVersion.v1_18)) {
             ScriptEvent.registerScriptEvent(TNTPrimesScriptEvent.class);
         }

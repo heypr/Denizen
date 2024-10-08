@@ -53,6 +53,14 @@ public abstract class CompoundTag extends Tag {
         return value.containsKey(key);
     }
 
+    public boolean isEmpty() {
+        return getValue().isEmpty();
+    }
+
+    public int size() {
+        return getValue().size();
+    }
+
     @Override
     public Map<String, Tag> getValue() {
         return value;
@@ -75,6 +83,10 @@ public abstract class CompoundTag extends Tag {
      */
     public CompoundTagBuilder createBuilder() {
         return new CompoundTagBuilder(new HashMap<>(value));
+    }
+
+    public CompoundTag getCompound(String key) {
+        return value.get(key) instanceof CompoundTag compoundTag ? compoundTag : null;
     }
 
     /**

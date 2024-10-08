@@ -227,6 +227,14 @@ public class BukkitImplDeprecations {
     public static Warning oldStructureTypes = new SlowWarning("oldStructureTypes", "'server.structure_types' is based on outdated API and doesn't support modern datapack features. Use 'server.structures' instead.");
     public static Warning findStructureTags = new SlowWarning("findStructureTags", "'LocationTag.find.structure' and related tags are deprecated in favor of 'LocationTag.find_structure'.");
 
+    // Added 2021/03/29, made very-slow 2022/12/31, made slow 2024/05/09.
+    // 2022-year-end commonality: #7
+    // 2023-year-end commonality: #31
+    public static Warning legacyAttributeProperties = new SlowWarning("legacyAttributeProperties", "The 'attribute' properties are deprecated in favor of the 'attribute_modifiers' properties which more fully implement the attribute system.");
+
+    // Added 2024/05/31
+    public static Warning oldNbtProperty = new SlowWarning("oldNbtProperty", "'ItemTag.raw_nbt' is deprecated in favor of 'ItemTag.custom_data', as item NBT was removed by Mojang in favor of item components.");
+
     // ==================== VERY SLOW deprecations ====================
     // These are only shown minimally, so server owners are aware of them but not bugged by them. Only servers with active scripters (using 'ex reload') will see them often.
 
@@ -256,11 +264,6 @@ public class BukkitImplDeprecations {
     // Added 2021/10/18, made very-slow 2022/12/31.
     // 2022-year-end commonality: #10
     public static Warning entityMechanismsFormat = new VerySlowWarning("entityMechanismsFormat", "Entity script containers previously allowed mechanisms in the script's root, however they should now be under a 'mechanisms' key.");
-
-    // Added 2021/03/29, made very-slow 2022/12/31.
-    // 2022-year-end commonality: #7
-    // 2023-year-end commonality: #31
-    public static Warning legacyAttributeProperties = new VerySlowWarning("legacyAttributeProperties", "The 'attribute' properties are deprecated in favor of the 'attribute_modifiers' properties which more fully implement the attribute system.");
 
     // Added 2021/08/30, made very-slow 2022/12/31.
     // 2022-year-end commonality: #23
@@ -302,6 +305,10 @@ public class BukkitImplDeprecations {
     // 2022-year-end commonality: #18
     // 2023-year-end commonality: #30
     public static Warning debugBlockAlpha = new VerySlowWarning("debugBlockAlpha", "The 'alpha' argument for the 'debugblock' command is deprecated: put the alpha in the color input instead.");
+
+    // Added 2024/6/17
+    // Good candidate for SlowWarning, due to ease of update and the newer names already being more "normal"/well-known
+    public static Warning oldSpigotNames = new VerySlowWarning("oldSpigotNames", "Several features (particles, entities, etc.) had alternative naming added by Spigot, which is now deprecated in favor of the official Minecraft naming; see relevant feature's meta docs for more information.");
 
     // ==================== FUTURE deprecations ====================
 
