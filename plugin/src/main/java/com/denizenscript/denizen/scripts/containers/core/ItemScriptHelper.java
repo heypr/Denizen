@@ -14,6 +14,7 @@ import com.denizenscript.denizen.tags.BukkitTagContext;
 import com.denizenscript.denizen.utilities.BukkitImplDeprecations;
 import com.denizenscript.denizen.utilities.PaperAPITools;
 import com.denizenscript.denizen.utilities.Utilities;
+import com.denizenscript.denizencore.DenizenCore;
 import com.denizenscript.denizencore.events.ScriptEvent;
 import com.denizenscript.denizencore.objects.core.DurationTag;
 import com.denizenscript.denizencore.objects.core.ListTag;
@@ -25,10 +26,7 @@ import com.denizenscript.denizencore.utilities.CoreUtilities;
 import com.denizenscript.denizencore.utilities.YamlConfiguration;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
 import com.denizenscript.denizencore.utilities.text.StringHolder;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
+import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
@@ -59,7 +57,12 @@ public class ItemScriptHelper implements Listener {
         smithingRetain.clear();
         recipeCache.clear();
         recipeIdToItemScript.clear();
-        NMSHandler.itemHelper.clearDenizenRecipes();
+        Iterator<Recipe> recipeIterator = Bukkit.recipeIterator();
+        while (recipeIterator.hasNext()) {
+            if (recipeIterator.next() instanceof Keyed keyed && keyed.getKey().getNamespace().equals("denizen")) {
+                recipeIterator.remove();
+            }
+        }
         PaperAPITools.instance.clearBrewingRecipes();
     }
 
@@ -116,8 +119,9 @@ public class ItemScriptHelper implements Listener {
                     }
                 }
                 if (exact) {
+                    TagContext context = DenizenCore.implementation.getTagContext(container);
                     for (ItemScriptContainer possibleContainer : ItemScriptHelper.item_scripts.values()) {
-                        if (possibleContainer.getCleanReference() != null && possibleContainer.getCleanReference().tryAdvancedMatcher(entry)) {
+                        if (possibleContainer.getCleanReference() != null && possibleContainer.getCleanReference().tryAdvancedMatcher(entry, context)) {
                             outputItems.add(possibleContainer.getCleanReference().getItemStack());
                             any = true;
                         }
@@ -367,7 +371,10 @@ public class ItemScriptHelper implements Listener {
         if (item == null) {
             return null;
         }
-        CompoundTag tag = NMSHandler.itemHelper.getNbtData(item);
+        CompoundTag tag = NMSHandler.itemHelper.getCustomData(item);
+        if (tag == null) {
+            return null;
+        }
         String scriptName = tag.getString("DenizenItemScript");
         if (scriptName != null && !scriptName.equals("")) {
             return scriptName;
@@ -387,7 +394,10 @@ public class ItemScriptHelper implements Listener {
         if (item == null) {
             return null;
         }
-        CompoundTag tag = NMSHandler.itemHelper.getNbtData(item);
+        CompoundTag tag = NMSHandler.itemHelper.getCustomData(item);
+        if (tag == null) {
+            return null;
+        }
         String scriptName = tag.getString("DenizenItemScript");
         if (scriptName != null && !scriptName.equals("")) {
             return item_scripts.get(scriptName);

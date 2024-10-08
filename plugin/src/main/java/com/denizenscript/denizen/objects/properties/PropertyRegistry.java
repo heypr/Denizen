@@ -33,7 +33,9 @@ public class PropertyRegistry {
         PropertyParser.registerProperty(EntityAI.class, EntityTag.class);
         PropertyParser.registerProperty(EntityAnger.class, EntityTag.class);
         PropertyParser.registerProperty(EntityAngry.class, EntityTag.class);
-        PropertyParser.registerProperty(EntityAreaEffectCloud.class, EntityTag.class);
+        if (NMSHandler.getVersion().isAtMost(NMSVersion.v1_19)) {
+            PropertyParser.registerProperty(EntityAreaEffectCloud.class, EntityTag.class);
+        }
         PropertyParser.registerProperty(EntityArmorBonus.class, EntityTag.class);
         PropertyParser.registerProperty(EntityArrowDamage.class, EntityTag.class);
         PropertyParser.registerProperty(EntityArrowPierceLevel.class, EntityTag.class);
@@ -74,6 +76,10 @@ public class PropertyRegistry {
         }
         PropertyParser.registerProperty(EntityDropsItem.class, EntityTag.class);
         PropertyParser.registerProperty(EntityEquipment.class, EntityTag.class);
+        PropertyParser.registerProperty(EntityEquipmentDropChance.class, EntityTag.class);
+        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19)) {
+            PropertyParser.registerProperty(EntityExploredLocations.class, EntityTag.class);
+        }
         PropertyParser.registerProperty(EntityExplosionFire.class, EntityTag.class);
         PropertyParser.registerProperty(EntityExplosionRadius.class, EntityTag.class);
         PropertyParser.registerProperty(EntityEyeTargetLocation.class, EntityTag.class);
@@ -209,6 +215,9 @@ public class PropertyRegistry {
         PropertyParser.registerProperty(ItemCanDestroy.class, ItemTag.class);
         PropertyParser.registerProperty(ItemCanPlaceOn.class, ItemTag.class);
         PropertyParser.registerProperty(ItemColor.class, ItemTag.class);
+        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_20)) {
+            PropertyParser.registerProperty(ItemCustomData.class, ItemTag.class);
+        }
         PropertyParser.registerProperty(ItemCustomModel.class, ItemTag.class);
         PropertyParser.registerProperty(ItemChargedProjectile.class, ItemTag.class);
         PropertyParser.registerProperty(ItemEnchantments.class, ItemTag.class);
@@ -228,7 +237,9 @@ public class PropertyRegistry {
         PropertyParser.registerProperty(ItemMap.class, ItemTag.class);
         PropertyParser.registerProperty(ItemNBT.class, ItemTag.class);
         PropertyParser.registerProperty(ItemPatterns.class, ItemTag.class);
-        PropertyParser.registerProperty(ItemPotion.class, ItemTag.class);
+        if (NMSHandler.getVersion().isAtMost(NMSVersion.v1_19)) {
+            PropertyParser.registerProperty(ItemPotion.class, ItemTag.class);
+        }
         PropertyParser.registerProperty(ItemQuantity.class, ItemTag.class);
         PropertyParser.registerProperty(ItemRawNBT.class, ItemTag.class);
         PropertyParser.registerProperty(ItemRepairCost.class, ItemTag.class);

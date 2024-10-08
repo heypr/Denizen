@@ -2,7 +2,10 @@ package com.denizenscript.denizen.nms.v1_20;
 
 import com.denizenscript.denizen.Denizen;
 import com.denizenscript.denizen.nms.NMSHandler;
-import com.denizenscript.denizen.nms.abstracts.*;
+import com.denizenscript.denizen.nms.abstracts.BiomeNMS;
+import com.denizenscript.denizen.nms.abstracts.BlockLight;
+import com.denizenscript.denizen.nms.abstracts.ProfileEditor;
+import com.denizenscript.denizen.nms.abstracts.Sidebar;
 import com.denizenscript.denizen.nms.util.PlayerProfile;
 import com.denizenscript.denizen.nms.util.jnbt.CompoundTag;
 import com.denizenscript.denizen.nms.util.jnbt.Tag;
@@ -47,7 +50,6 @@ import net.minecraft.nbt.ByteArrayTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -62,22 +64,25 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.boss.BossBar;
-import org.bukkit.craftbukkit.v1_20_R3.CraftServer;
-import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_20_R3.block.data.CraftBlockData;
-import org.bukkit.craftbukkit.v1_20_R3.boss.CraftBossBar;
-import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftInventory;
-import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftInventoryCustom;
-import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftInventoryView;
-import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftItemStack;
-import org.bukkit.craftbukkit.v1_20_R3.persistence.CraftPersistentDataContainer;
-import org.bukkit.craftbukkit.v1_20_R3.util.CraftChatMessage;
-import org.bukkit.craftbukkit.v1_20_R3.util.CraftLocation;
-import org.bukkit.craftbukkit.v1_20_R3.util.CraftMagicNumbers;
+import org.bukkit.craftbukkit.v1_20_R4.CraftRegistry;
+import org.bukkit.craftbukkit.v1_20_R4.CraftServer;
+import org.bukkit.craftbukkit.v1_20_R4.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R4.block.data.CraftBlockData;
+import org.bukkit.craftbukkit.v1_20_R4.boss.CraftBossBar;
+import org.bukkit.craftbukkit.v1_20_R4.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R4.inventory.CraftInventory;
+import org.bukkit.craftbukkit.v1_20_R4.inventory.CraftInventoryCustom;
+import org.bukkit.craftbukkit.v1_20_R4.inventory.CraftInventoryView;
+import org.bukkit.craftbukkit.v1_20_R4.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_20_R4.persistence.CraftPersistentDataContainer;
+import org.bukkit.craftbukkit.v1_20_R4.util.CraftChatMessage;
+import org.bukkit.craftbukkit.v1_20_R4.util.CraftLocation;
+import org.bukkit.craftbukkit.v1_20_R4.util.CraftMagicNumbers;
+import org.bukkit.craftbukkit.v1_20_R4.util.CraftNamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
@@ -107,7 +112,6 @@ public class Handler extends NMSHandler {
         fishingHelper = new FishingHelperImpl();
         itemHelper = new ItemHelperImpl();
         packetHelper = new PacketHelperImpl();
-        particleHelper = new ParticleHelper();
         playerHelper = new PlayerHelperImpl();
         worldHelper = new WorldHelperImpl();
         enchantmentHelper = new EnchantmentHelperImpl();
@@ -147,7 +151,7 @@ public class Handler extends NMSHandler {
 
     @Override
     public boolean isCorrectMappingsCode() {
-        return ((CraftMagicNumbers) CraftMagicNumbers.INSTANCE).getMappingsVersion().equals("60a2bb6bf2684dc61c56b90d7c41bddc");
+        return ((CraftMagicNumbers) CraftMagicNumbers.INSTANCE).getMappingsVersion().equals("ee13f98a43b9c5abffdcc0bb24154460");
     }
 
     @Override
@@ -308,14 +312,14 @@ public class Handler extends NMSHandler {
         ServerLevel level = ((CraftWorld) world).getHandle();
         ArrayList<BiomeNMS> output = new ArrayList<>();
         for (Map.Entry<ResourceKey<Biome>, Biome> pair : level.registryAccess().registryOrThrow(Registries.BIOME).entrySet()) {
-            output.add(new BiomeNMSImpl(level, pair.getKey().location().toString()));
+            output.add(new BiomeNMSImpl(level, CraftNamespacedKey.fromMinecraft(pair.getKey().location())));
         }
         return output;
     }
 
     @Override
-    public BiomeNMS getBiomeNMS(World world, String name) {
-        BiomeNMSImpl impl = new BiomeNMSImpl(((CraftWorld) world).getHandle(), name);
+    public BiomeNMS getBiomeNMS(World world, NamespacedKey key) {
+        BiomeNMSImpl impl = new BiomeNMSImpl(((CraftWorld) world).getHandle(), key);
         if (impl.biomeHolder == null) {
             return null;
         }
@@ -328,8 +332,7 @@ public class Handler extends NMSHandler {
         ServerLevel level = ((CraftWorld) block.getWorld()).getHandle();
         Holder<Biome> biome = level.getNoiseBiome(block.getX() >> 2, block.getY() >> 2, block.getZ() >> 2);
         ResourceLocation key = level.registryAccess().registryOrThrow(Registries.BIOME).getKey(biome.value());
-        String keyText = key.getNamespace().equals("minecraft") ? key.getPath() : key.toString();
-        return new BiomeNMSImpl(level, keyText);
+        return new BiomeNMSImpl(level, CraftNamespacedKey.fromMinecraft(key));
     }
 
     @Override
@@ -356,8 +359,9 @@ public class Handler extends NMSHandler {
                 if (item.getTag() != null && item.getTag().getNbt() != null) {
                     tag.put("tag", TagParser.parseTag(item.getTag().getNbt()));
                 }
-                ItemStack itemStack = ItemStack.of(tag);
-                return new ItemTag(CraftItemStack.asBukkitCopy(itemStack)).identify();
+                // TODO: 1.20.6: use components and fallback to creating item from tag when custom NBT is specified
+                ItemStack nmsStack = ItemStack.parseOptional(CraftRegistry.getMinecraftRegistry(), tag);
+                return new ItemTag(CraftItemStack.asBukkitCopy(nmsStack)).identify();
             }
             catch (Throwable ex) {
                 Debug.echoError(ex);
@@ -424,15 +428,13 @@ public class Handler extends NMSHandler {
         if (nms == null) {
             return null;
         }
-        String json = Component.Serializer.toJson(nms);
-        return ComponentSerializer.parse(json);
+        return ComponentSerializer.parse(CraftChatMessage.toJSON(nms));
     }
 
-    public static MutableComponent componentToNMS(BaseComponent[] spigot) {
+    public static Component componentToNMS(BaseComponent[] spigot) {
         if (spigot == null) {
             return null;
         }
-        String json = FormattedTextHelper.componentToJson(spigot);
-        return Component.Serializer.fromJson(json);
+        return CraftChatMessage.fromJSONOrNull(FormattedTextHelper.componentToJson(spigot));
     }
 }

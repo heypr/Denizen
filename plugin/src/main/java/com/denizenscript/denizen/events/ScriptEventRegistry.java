@@ -61,6 +61,9 @@ public class ScriptEventRegistry {
         ScriptEvent.notNameParts.add(0, "SpigotImpl");
 
         // Block events
+        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19)) {
+            ScriptEvent.registerScriptEvent(BellRingScriptEvent.class);
+        }
         ScriptEvent.registerScriptEvent(BlockBuiltScriptEvent.class);
         ScriptEvent.registerScriptEvent(BlockBurnsScriptEvent.class);
         ScriptEvent.registerScriptEvent(BlockCooksSmeltsItemScriptEvent.class);
@@ -113,9 +116,9 @@ public class ScriptEventRegistry {
         ScriptEvent.registerScriptEvent(EntityDespawnScriptEvent.class);
         ScriptEvent.registerScriptEvent(EntityDropsItemScriptEvent.class);
         ScriptEvent.registerScriptEvent(EntityEntersPortalScriptEvent.class);
-        ScriptEvent.registerScriptEvent(EntityEntersVehicleScriptEvent.class);
+        ScriptEvent.registerScriptEvent(NMSHandler.entityHelper.getEntersVehicleEventImpl());
         ScriptEvent.registerScriptEvent(EntityExitsPortalScriptEvent.class);
-        ScriptEvent.registerScriptEvent(EntityExitsVehicleScriptEvent.class);
+        ScriptEvent.registerScriptEvent(NMSHandler.entityHelper.getExitsVehicleEventImpl());
         ScriptEvent.registerScriptEvent(EntityExplodesScriptEvent.class);
         ScriptEvent.registerScriptEvent(EntityExplosionPrimesScriptEvent.class);
         ScriptEvent.registerScriptEvent(EntityFoodLevelChangeScriptEvent.class);
@@ -173,6 +176,7 @@ public class ScriptEventRegistry {
         ScriptEvent.registerScriptEvent(HotbarScrollScriptEvent.class);
         ScriptEvent.registerScriptEvent(ExperienceBottleBreaksScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerAnimatesScriptEvent.class);
+        ScriptEvent.registerScriptEvent(PlayerArmorStandManipulateScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerBreaksBlockScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerBreaksItemScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerChangesMainHandScriptEvent.class);
