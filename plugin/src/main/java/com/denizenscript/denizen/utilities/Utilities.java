@@ -10,6 +10,7 @@ import com.denizenscript.denizen.scripts.commands.world.SignCommand;
 import com.denizenscript.denizen.tags.BukkitTagContext;
 import com.denizenscript.denizen.utilities.implementation.BukkitScriptEntryData;
 import com.denizenscript.denizencore.events.ScriptEvent;
+import com.denizenscript.denizencore.objects.Mechanism;
 import com.denizenscript.denizencore.objects.core.ElementTag;
 import com.denizenscript.denizencore.objects.core.ListTag;
 import com.denizenscript.denizencore.objects.core.ScriptTag;
@@ -19,6 +20,7 @@ import com.denizenscript.denizencore.utilities.AsciiMatcher;
 import com.denizenscript.denizencore.utilities.CoreConfiguration;
 import com.denizenscript.denizencore.utilities.CoreUtilities;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
+import com.denizenscript.denizencore.utilities.debugging.DebugInternals;
 import net.citizensnpcs.api.CitizensAPI;
 import net.citizensnpcs.api.npc.NPC;
 import org.bukkit.*;
@@ -31,6 +33,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.*;
 import org.bukkit.util.BoundingBox;
+import org.bukkit.util.OldEnum;
 import org.bukkit.util.Vector;
 
 import java.io.File;
@@ -543,12 +546,20 @@ public class Utilities {
     }
 
     // TODO once 1.21 is the minimum supported version, replace with direct registry-based handling
-    @SuppressWarnings({"unchecked", "DataFlowIssue"})
-    public static ListTag listTypes(Class<?> type) {
+    public static <T> List<T> listTypesRaw(Class<T> type) {
         if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_21) && Keyed.class.isAssignableFrom(type)) {
-            return registryKeys(Bukkit.getRegistry((Class<? extends Keyed>) type));
+            return (List) Bukkit.getRegistry((Class<? extends Keyed>) type).stream().toList();
         }
-        return new ListTag(Arrays.asList(((Class<? extends Enum<?>>) type).getEnumConstants()), ElementTag::new);
+        return (List) Arrays.asList(((Class<? extends Enum<?>>) type).getEnumConstants());
+    }
+
+    public static ListTag listTypes(Class<?> type) {
+        return new ListTag(listTypesRaw(type), Utilities::enumlikeToElement);
+    }
+
+    public static ListTag listLegacyTypes(Class<? extends Keyed> type) {
+        List<?> types = NMSHandler.getVersion().isAtLeast(NMSVersion.v1_21) ? Bukkit.getRegistry(type).stream().toList() : Arrays.asList(type.getEnumConstants());
+        return new ListTag(types, Utilities::enumLikeToLegacyElement);
     }
 
     public static ElementTag enumlikeToElement(Object val) {
@@ -556,15 +567,82 @@ public class Utilities {
             return new ElementTag(((Enum<?>) val).name());
         }
         if (val instanceof Keyed) {
-            return new ElementTag(namespacedKeyToString(((Keyed) val).getKey()));
+            return new ElementTag(namespacedKeyToString(((Keyed) val).getKey()), true);
         }
         return new ElementTag(val.toString());
     }
 
-    public static <T> T elementToEnumlike(ElementTag element, Class<T> type) {
-        if (Keyed.class.isAssignableFrom(type)) {
-            return (T) Bukkit.getRegistry((Class<? extends Keyed>) type).get(parseNamespacedKey(element.asString()));
+    public static ElementTag enumLikeToLegacyElement(Object val) {
+        if (val instanceof Enum<?> enumVal) {
+            return new ElementTag(enumVal);
         }
-        return (T) element.asEnum((Class<? extends Enum>) type);
+        if (val instanceof OldEnum<?> oldEnumVal) {
+            return new ElementTag(oldEnumVal.name(), true);
+        }
+        throw new UnsupportedOperationException("Cannot get legacy name element, value isn't an enum: " + val);
+    }
+
+    public static <T> T elementToEnumlike(ElementTag element, Class<T> type) {
+        return elementToEnumlike(element, type, true);
+    }
+
+    public static <T> T elementToEnumlike(ElementTag element, Class<T> type, boolean showWarning) {
+        if (NMSHandler.getVersion().isAtMost(NMSVersion.v1_20)) {
+            return element.asEnum(type);
+        }
+        Registry<?> registry = Bukkit.getRegistry((Class<? extends Keyed>) type);
+        if (registry == null) {
+            return element.asEnum(type);
+        }
+        T value = (T) registry.get(parseNamespacedKey(element.asString()));
+        if (value != null || !Settings.cache_legacySpigotNamesSupport) {
+            return value;
+        }
+        T enumValue = element.asEnum(type);
+        if (enumValue != null) {
+            if (showWarning) {
+                BukkitImplDeprecations.oldSpigotNames.warn();
+            }
+            return enumValue;
+        }
+        String updatedName = NMSHandler.instance.updateLegacyName(type, element.asString());
+        if (CoreUtilities.equalsIgnoreCase(element.asString(), updatedName)) {
+            return null;
+        }
+        if (showWarning) {
+            BukkitImplDeprecations.oldSpigotNames.warn();
+        }
+        return (T) registry.get(parseNamespacedKey(updatedName));
+    }
+
+    public static <T> T elementToRequiredEnumLike(ElementTag element, Class<T> type, Mechanism mechanism) {
+        T converted = elementToEnumlike(element, type);
+        if (converted == null) {
+            mechanism.echoError("Invalid " + DebugInternals.getClassNameOpti(type) + " specified.");
+            return null;
+        }
+        return converted;
+    }
+
+    public static <T> T findBestEnumlike(Class<T> type, String... names) {
+        for (String name : names) {
+            T val = elementToEnumlike(new ElementTag(name), type, false);
+            if (val != null) {
+                return val;
+            }
+        }
+        return null;
+    }
+
+    public static boolean matchesEnumlike(ElementTag element, Class<?> type) {
+        return elementToEnumlike(element, type, false) != null;
+    }
+
+    public static boolean requireEnumlike(Mechanism mechanism, Class<?> type) {
+        if (!matchesEnumlike(mechanism.getValue(), type)) {
+            mechanism.echoError("Invalid " + DebugInternals.getClassNameOpti(type) + " specified.");
+            return false;
+        }
+        return true;
     }
 }

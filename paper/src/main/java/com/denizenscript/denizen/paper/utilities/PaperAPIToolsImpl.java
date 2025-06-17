@@ -11,6 +11,7 @@ import com.denizenscript.denizen.scripts.containers.core.ItemScriptHelper;
 import com.denizenscript.denizen.utilities.FormattedTextHelper;
 import com.denizenscript.denizen.utilities.PaperAPITools;
 import com.denizenscript.denizencore.DenizenCore;
+import com.denizenscript.denizencore.objects.core.ElementTag;
 import com.denizenscript.denizencore.tags.TagContext;
 import com.denizenscript.denizencore.utilities.CoreUtilities;
 import com.denizenscript.denizencore.utilities.ReflectionHelper;
@@ -34,6 +35,7 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.*;
+import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionBrewer;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Consumer;
@@ -157,8 +159,9 @@ public class PaperAPIToolsImpl extends PaperAPITools {
             }
         }
         if (relativeTeleportFlags != null) {
+            // TODO: MC 1.21.3: Paper updated this API to work differently due to underlying Minecraft changes.
             for (TeleportCommand.Relative relativeTeleportFlag : relativeTeleportFlags) {
-                teleportFlags.add(TeleportFlag.Relative.values()[relativeTeleportFlag.ordinal()]);
+                teleportFlags.add(new ElementTag(relativeTeleportFlag.name()).asEnum(TeleportFlag.Relative.class));
             }
         }
         entity.teleport(loc, cause, teleportFlags.toArray(new TeleportFlag[0]));
@@ -384,5 +387,19 @@ public class PaperAPIToolsImpl extends PaperAPITools {
     @Override
     public boolean canUseEquipmentSlot(LivingEntity entity, EquipmentSlot slot) {
         return NMSHandler.getVersion().isAtLeast(NMSVersion.v1_20) ? entity.canUseEquipmentSlot(slot) : super.canUseEquipmentSlot(entity, slot);
+    }
+
+    @Override
+    public boolean hasCustomName(PotionMeta meta) {
+        return meta.hasCustomPotionName();
+    }
+
+    @Override
+    public void setMaterialTags(Material type, Set<NamespacedKey> tags) {
+        if (!NMSHandler.getVersion().isAtLeast(NMSVersion.v1_21)) {
+            super.setMaterialTags(type, tags);
+            return;
+        }
+        BlockTagsSetter.INSTANCE.setTags(type, tags);
     }
 }

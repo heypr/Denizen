@@ -16,7 +16,7 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.storage.PrimaryLevelData;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.craftbukkit.v1_21_R1.CraftWorld;
+import org.bukkit.craftbukkit.v1_21_R4.CraftWorld;
 
 public class WorldHelperImpl implements WorldHelper {
 
@@ -68,12 +68,12 @@ public class WorldHelperImpl implements WorldHelper {
 
     @Override
     public boolean isDay(World world) {
-        return ((CraftWorld) world).getHandle().isDay();
+        return ((CraftWorld) world).getHandle().isBrightOutside();
     }
 
     @Override
     public boolean isNight(World world) {
-        return ((CraftWorld) world).getHandle().isNight();
+        return ((CraftWorld) world).getHandle().isDarkOutside();
     }
 
     @Override
@@ -98,7 +98,7 @@ public class WorldHelperImpl implements WorldHelper {
     // net.minecraft.server.level.ServerLevel#resetWeatherCycle()
     @Override
     public void clearWeather(World world) {
-        PrimaryLevelData data = ((CraftWorld) world).getHandle().K;
+        PrimaryLevelData data = ((CraftWorld) world).getHandle().L;
         data.setRaining(false);
         if (!data.isRaining()) {
             data.setRainTime(0);

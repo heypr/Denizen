@@ -58,6 +58,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import org.bukkit.Art;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -91,6 +92,16 @@ public class EntityHelperImpl extends EntityHelper {
     public static final MethodHandle ENTITY_ONGROUND_SETTER = ReflectionHelper.getFinalSetter(net.minecraft.world.entity.Entity.class, ReflectionMappingsInfo.Entity_onGround, boolean.class);
 
     public static final EntityDataAccessor<Boolean> ENDERMAN_DATA_ACCESSOR_SCREAMING = ReflectionHelper.getFieldValue(EnderMan.class, ReflectionMappingsInfo.EnderMan_DATA_CREEPY, null);
+
+    @Override
+    public int getBlockHeight(Art art) {
+        return art.getBlockHeight();
+    }
+
+    @Override
+    public int getBlockWidth(Art art) {
+        return art.getBlockWidth();
+    }
 
     @Override
     public void setInvisible(Entity entity, boolean invisible) {
@@ -161,10 +172,9 @@ public class EntityHelperImpl extends EntityHelper {
 
     @Override
     public void forceInteraction(Player player, Location location) {
-        CraftPlayer craftPlayer = (CraftPlayer) player;
-        // TODO: 1.20.6: passing a null player isn't valid (and seemingly never was) - need to require HumanEntity in the mechanism
-        ((CraftBlock) location.getBlock()).getNMS().useItemOn(craftPlayer.getHandle().getMainHandItem(), ((CraftWorld) location.getWorld()).getHandle(),
-                craftPlayer.getHandle(), InteractionHand.MAIN_HAND,
+        ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
+        ((CraftBlock) location.getBlock()).getNMS().useItemOn(nmsPlayer.getMainHandItem(), ((CraftWorld) location.getWorld()).getHandle(),
+                nmsPlayer, InteractionHand.MAIN_HAND,
                 new BlockHitResult(new Vec3(0, 0, 0), null, CraftLocation.toBlockPosition(location), false));
     }
 

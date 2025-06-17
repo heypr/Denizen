@@ -12,7 +12,7 @@ public class HiddenEntitiesPacketHandlers {
 
     public static void registerHandlers() {
         DenizenNetworkManagerImpl.registerPacketHandler(ClientboundAddEntityPacket.class, HiddenEntitiesPacketHandlers::processHiddenEntitiesForPacket);
-        DenizenNetworkManagerImpl.registerPacketHandler(ClientboundAddExperienceOrbPacket.class, HiddenEntitiesPacketHandlers::processHiddenEntitiesForPacket);
+        //DenizenNetworkManagerImpl.registerPacketHandler(ClientboundAddExperienceOrbPacket.class, HiddenEntitiesPacketHandlers::processHiddenEntitiesForPacket);
         DenizenNetworkManagerImpl.registerPacketHandler(ClientboundMoveEntityPacket.Rot.class, HiddenEntitiesPacketHandlers::processHiddenEntitiesForPacket);
         DenizenNetworkManagerImpl.registerPacketHandler(ClientboundMoveEntityPacket.Pos.class, HiddenEntitiesPacketHandlers::processHiddenEntitiesForPacket);
         DenizenNetworkManagerImpl.registerPacketHandler(ClientboundMoveEntityPacket.PosRot.class, HiddenEntitiesPacketHandlers::processHiddenEntitiesForPacket);
@@ -35,9 +35,11 @@ public class HiddenEntitiesPacketHandlers {
             if (packet instanceof ClientboundAddEntityPacket) {
                 ider = ((ClientboundAddEntityPacket) packet).getId();
             }
+            //TODO: 1.21.5: check this packet list
+            /*
             else if (packet instanceof ClientboundAddExperienceOrbPacket) {
                 ider = ((ClientboundAddExperienceOrbPacket) packet).getId();
-            }
+            }*/
             else if (packet instanceof ClientboundMoveEntityPacket) {
                 e = ((ClientboundMoveEntityPacket) packet).getEntity(networkManager.player.level());
             }
@@ -48,7 +50,7 @@ public class HiddenEntitiesPacketHandlers {
                 ider = ((ClientboundSetEntityMotionPacket) packet).getId();
             }
             else if (packet instanceof ClientboundTeleportEntityPacket) {
-                ider = ((ClientboundTeleportEntityPacket) packet).getId();
+                ider = ((ClientboundTeleportEntityPacket) packet).id();
             }
             if (e == null && ider != -1) {
                 e = networkManager.player.level().getEntity(ider);

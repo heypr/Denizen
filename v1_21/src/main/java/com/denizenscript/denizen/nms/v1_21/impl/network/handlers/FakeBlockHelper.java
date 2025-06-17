@@ -4,8 +4,8 @@ import com.denizenscript.denizen.Denizen;
 import com.denizenscript.denizen.nms.v1_21.ReflectionMappingsInfo;
 import com.denizenscript.denizen.objects.LocationTag;
 import com.denizenscript.denizen.utilities.blocks.FakeBlock;
-import com.denizenscript.denizencore.utilities.debugging.Debug;
 import com.denizenscript.denizencore.utilities.ReflectionHelper;
+import com.denizenscript.denizencore.utilities.debugging.Debug;
 import io.netty.buffer.Unpooled;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
@@ -23,10 +23,10 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.PalettedContainer;
 import org.bukkit.World;
-import org.bukkit.craftbukkit.v1_21_R1.CraftRegistry;
-import org.bukkit.craftbukkit.v1_21_R1.CraftWorld;
-import org.bukkit.craftbukkit.v1_21_R1.block.CraftBlockStates;
-import org.bukkit.craftbukkit.v1_21_R1.block.data.CraftBlockData;
+import org.bukkit.craftbukkit.v1_21_R4.CraftRegistry;
+import org.bukkit.craftbukkit.v1_21_R4.CraftWorld;
+import org.bukkit.craftbukkit.v1_21_R4.block.CraftBlockStates;
+import org.bukkit.craftbukkit.v1_21_R4.block.data.CraftBlockData;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Constructor;
@@ -90,7 +90,7 @@ public class FakeBlockHelper {
 
     public static ClientboundLevelChunkWithLightPacket handleMapChunkPacket(World world, ClientboundLevelChunkWithLightPacket originalPacket, int chunkX, int chunkZ, List<FakeBlock> blocks) {
         try {
-            ClientboundLevelChunkWithLightPacket duplicateCorePacket = ClientboundLevelChunkWithLightPacket.STREAM_CODEC.decode(DenizenNetworkManagerImpl.copyPacket(originalPacket, ClientboundLevelChunkWithLightPacket.STREAM_CODEC));
+            ClientboundLevelChunkWithLightPacket duplicateCorePacket = DenizenNetworkManagerImpl.copyPacket(originalPacket, ClientboundLevelChunkWithLightPacket.STREAM_CODEC);
             copyPacketPaperPatch(duplicateCorePacket, originalPacket);
             RegistryFriendlyByteBuf copier = new RegistryFriendlyByteBuf(Unpooled.buffer(), CraftRegistry.getMinecraftRegistry());
             originalPacket.getChunkData().write(copier);
@@ -119,7 +119,7 @@ public class FakeBlockHelper {
             int worldMaxY = world.getMaxHeight();
             int minChunkY = worldMinY >> 4;
             int maxChunkY = worldMaxY >> 4;
-            Registry<Biome> biomeRegistry = ((CraftWorld) world).getHandle().registryAccess().registryOrThrow(Registries.BIOME);
+            Registry<Biome> biomeRegistry = ((CraftWorld) world).getHandle().registryAccess().lookupOrThrow(Registries.BIOME);
             for (int y = minChunkY; y < maxChunkY; y++) {
                 int blockCount = serial.readShort();
                 // reflected constructors as workaround for spigot remapper bug - Mojang "IdMap" became Spigot "IRegistry" but should be "Registry"

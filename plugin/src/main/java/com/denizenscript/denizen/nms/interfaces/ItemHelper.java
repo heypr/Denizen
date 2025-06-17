@@ -1,11 +1,14 @@
 package com.denizenscript.denizen.nms.interfaces;
 
+import com.denizenscript.denizen.nms.NMSHandler;
+import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.nms.util.PlayerProfile;
 import com.denizenscript.denizen.nms.util.jnbt.CompoundTag;
-import com.denizenscript.denizen.nms.util.jnbt.IntArrayTag;
 import com.denizenscript.denizen.nms.util.jnbt.Tag;
 import com.denizenscript.denizen.objects.ItemTag;
 import com.denizenscript.denizen.utilities.nbt.CustomNBT;
+import com.denizenscript.denizencore.objects.core.MapTag;
+import com.google.gson.JsonObject;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -18,11 +21,12 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.RecipeChoice;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.inventory.meta.BlockStateMeta;
+import org.bukkit.inventory.meta.ShieldMeta;
 import org.bukkit.map.MapView;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
+import java.util.function.Consumer;
 
 public abstract class ItemHelper {
 
@@ -40,7 +44,17 @@ public abstract class ItemHelper {
 
     public abstract String getJsonString(ItemStack itemStack);
 
-    public abstract String getRawHoverText(ItemStack itemStack);
+    public String getLegacyHoverNbt(ItemTag item) { // TODO: once 1.20 is the minimum supported version, remove this
+        return item.getItemMeta().getAsString();
+    }
+
+    public JsonObject getRawHoverComponentsJson(ItemStack item) {
+        throw new UnsupportedOperationException();
+    }
+
+    public ItemStack applyRawHoverComponentsJson(ItemStack item, JsonObject components) {
+        throw new UnsupportedOperationException();
+    }
 
     public abstract PlayerProfile getSkullSkin(ItemStack itemStack);
 
@@ -105,14 +119,18 @@ public abstract class ItemHelper {
         }
         return CustomNBT.setNBTMaterials(item, CustomNBT.KEY_CAN_DESTROY, canBreak);
     }
-    
+
+    public MapTag getRawComponentsPatch(ItemStack item, boolean excludeHandled) {
+        throw new UnsupportedOperationException();
+    }
+
+    public ItemStack setRawComponentsPatch(ItemStack item, MapTag rawComponentsMap, int dataVersion, Consumer<String> errorHandler) {
+        throw new UnsupportedOperationException();
+    }
+
     public abstract void registerSmithingRecipe(String keyName, ItemStack result, ItemStack[] baseItem, boolean baseExact, ItemStack[] upgradeItem, boolean upgradeExact, ItemStack[] templateItem, boolean templateExact);
 
     public abstract void setInventoryItem(Inventory inventory, ItemStack item, int slot);
-
-    public abstract IntArrayTag convertUuidToNbt(UUID id);
-
-    public abstract UUID convertNbtToUuid(IntArrayTag id);
 
     public abstract String getDisplayName(ItemTag item);
 
@@ -146,12 +164,23 @@ public abstract class ItemHelper {
         throw new UnsupportedOperationException();
     }
 
-    public DyeColor getShieldColor(ItemStack item) { // TODO: once 1.20 is the minimum supported version, remove default impl
+    public DyeColor getShieldColor(ItemStack item) { // TODO: once 1.21 is the minimum supported version, remove from NMS
+        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_21)) {
+            return ((ShieldMeta) item.getItemMeta()).getBaseColor();
+        }
+        // TODO: once 1.20 is the minimum supported version, remove legacy code ↓
         BlockStateMeta stateMeta = (BlockStateMeta) item.getItemMeta();
         return stateMeta.hasBlockState() ? ((Banner) stateMeta.getBlockState()).getBaseColor() : null;
     }
 
-    public ItemStack setShieldColor(ItemStack item, DyeColor color) { // TODO: once 1.20 is the minimum supported version, remove default impl
+    public ItemStack setShieldColor(ItemStack item, DyeColor color) { // TODO: once 1.21 is the minimum supported version, remove from NMS
+        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_21)) {
+            ShieldMeta shieldMeta = (ShieldMeta) item.getItemMeta();
+            shieldMeta.setBaseColor(color);
+            item.setItemMeta(shieldMeta);
+            return item;
+        }
+        // TODO: once 1.20 is the minimum supported version, remove legacy code ↓
         if (color == null) {
             CompoundTag noStateNbt = getNbtData(item).createBuilder().remove("BlockEntityTag").build();
             return setNbtData(item, noStateNbt);
@@ -162,5 +191,17 @@ public abstract class ItemHelper {
         stateMeta.setBlockState(banner);
         item.setItemMeta(stateMeta);
         return item;
+    }
+
+    public void blockRecipeFinalization() {
+    }
+
+    public void restoreRecipeFinalization() {
+    }
+
+    public void removeRecipes(List<NamespacedKey> keys) {
+    }
+
+    public void registerOtherRecipe(org.bukkit.inventory.Recipe recipe) {
     }
 }
