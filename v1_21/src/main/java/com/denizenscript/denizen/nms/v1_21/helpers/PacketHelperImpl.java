@@ -50,14 +50,14 @@ import org.bukkit.Material;
 import org.bukkit.block.Sign;
 import org.bukkit.block.sign.Side;
 import org.bukkit.block.sign.SignSide;
-import org.bukkit.craftbukkit.v1_21_R4.CraftServer;
-import org.bukkit.craftbukkit.v1_21_R4.CraftWorld;
-import org.bukkit.craftbukkit.v1_21_R4.entity.CraftEntity;
-import org.bukkit.craftbukkit.v1_21_R4.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_21_R4.inventory.CraftItemStack;
-import org.bukkit.craftbukkit.v1_21_R4.map.CraftMapCanvas;
-import org.bukkit.craftbukkit.v1_21_R4.map.CraftMapView;
-import org.bukkit.craftbukkit.v1_21_R4.util.CraftLocation;
+import org.bukkit.craftbukkit.v1_21_R5.CraftServer;
+import org.bukkit.craftbukkit.v1_21_R5.CraftWorld;
+import org.bukkit.craftbukkit.v1_21_R5.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_21_R5.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_21_R5.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_21_R5.map.CraftMapCanvas;
+import org.bukkit.craftbukkit.v1_21_R5.map.CraftMapView;
+import org.bukkit.craftbukkit.v1_21_R5.util.CraftLocation;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
@@ -141,6 +141,7 @@ public class PacketHelperImpl implements PacketHelper {
         send(player, new ClientboundAddEntityPacket(entity, 0, BlockPos.ZERO));
         send(player, new ClientboundSetCameraPacket(entity));
         NMSHandler.playerHelper.refreshPlayer(player);
+        send(player, new ClientboundRemoveEntitiesPacket(entity.getId()));
     }
 
     @Override

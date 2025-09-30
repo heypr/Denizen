@@ -1,5 +1,6 @@
 package com.denizenscript.denizen.nms.v1_21.impl;
 
+import com.denizenscript.denizen.Denizen;
 import com.denizenscript.denizen.nms.NMSHandler;
 import com.denizenscript.denizen.nms.abstracts.ProfileEditor;
 import com.denizenscript.denizen.nms.util.PlayerProfile;
@@ -19,8 +20,8 @@ import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import org.bukkit.Bukkit;
-import org.bukkit.craftbukkit.v1_21_R4.CraftServer;
-import org.bukkit.craftbukkit.v1_21_R4.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_21_R5.CraftServer;
+import org.bukkit.craftbukkit.v1_21_R5.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerRespawnEvent;
 
@@ -31,9 +32,6 @@ import java.util.List;
 import java.util.UUID;
 
 public class ProfileEditorImpl extends ProfileEditor {
-
-    public static final String EMPTY_NAME = "";
-    public static final UUID NIL_UUID = new UUID(0L, 0L);
 
     @Override
     protected void updatePlayer(final Player player, final boolean isSkinChanging) {
@@ -52,6 +50,9 @@ public class ProfileEditorImpl extends ProfileEditor {
         }
         if (isSkinChanging) {
             ((CraftServer) Bukkit.getServer()).getHandle().respawn(nmsPlayer, true, Entity.RemovalReason.CHANGED_DIMENSION, PlayerRespawnEvent.RespawnReason.PLUGIN);
+        }
+        else {
+            NMSHandler.playerHelper.refreshPlayer(player);
         }
         player.updateInventory();
     }
@@ -92,7 +93,8 @@ public class ProfileEditorImpl extends ProfileEditor {
                 modifiedProfile.getProperties().putAll(ownProfile.getProperties());
             }
             else {
-                modifiedProfile.getProperties().putAll(baseProfile.getProperties());
+                // On Paper 1.19+, we use Paper's PlayerProfile API instead of this system
+                modifiedProfile.getProperties().putAll(Denizen.supportsPaper ? entry.profile().getProperties() : baseProfile.getProperties());
             }
             String listRename = RenameCommand.getCustomNameFor(entry.profileId(), networkManager.player.getBukkitEntity(), true);
             Component displayName = listRename != null ? Handler.componentToNMS(FormattedTextHelper.parse(listRename, ChatColor.WHITE)) : entry.displayName();
